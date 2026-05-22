@@ -237,6 +237,10 @@ function triggerPlayback(){
     if(blob.size < 500){ afterPlay(); return; }
     setStatus('Playing back...','listen to yourself','playing');
     flatBars('play');
+
+    let done = false;
+    const next = () => { if(!done){ done = true; afterPlay(); } };
+
     try {
       if(audioCtx.state==='suspended') await audioCtx.resume();
       const arrayBuf = await blob.arrayBuffer();
@@ -245,14 +249,14 @@ function triggerPlayback(){
       src.buffer = decoded;
       src.connect(audioCtx.destination);
       src.start(0);
-      src.onended = afterPlay;
+      src.onended = next;
     } catch(err) {
       console.warn('decodeAudioData failed, fallback:', err);
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
-      audio.onended = () => { URL.revokeObjectURL(url); afterPlay(); };
-      audio.onerror  = () => { URL.revokeObjectURL(url); afterPlay(); };
-      audio.play().catch(()=>afterPlay());
+      audio.onended = () => { URL.revokeObjectURL(url); next(); };
+      audio.onerror  = () => { URL.revokeObjectURL(url); next(); };
+      audio.play().catch(next);
     }
   };
 }
