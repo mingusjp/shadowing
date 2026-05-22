@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Luyện giọng</title>
+<title>Voice Shadowing</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -54,14 +54,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 <div class="container">
   <header>
     <div class="title">voice training tool</div>
-    <h1>Luyện <span>giọng</span></h1>
+    <h1>Voice <span>Shadowing</span></h1>
   </header>
 
   <div class="status">
     <div class="dot" id="dot"></div>
     <div class="status-info">
-      <div class="status-main" id="status-main">Nhấn bắt đầu để luyện tập</div>
-      <div class="status-sub" id="status-sub">tự động ghi khi có tiếng, phát lại khi im lặng</div>
+      <div class="status-main" id="status-main">Press start to begin</div>
+      <div class="status-sub" id="status-sub">records on voice, plays back on silence</div>
     </div>
     <div class="countdown" id="countdown"></div>
   </div>
@@ -71,29 +71,29 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   <div class="controls">
     <button id="btn-start" onclick="startSession()">
       <svg class="icon" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-      Bắt đầu
+      Start
     </button>
     <button id="btn-stop" class="danger" onclick="stopSession()" disabled>
       <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-      Dừng
+      Stop
     </button>
   </div>
 
   <div class="settings">
     <div class="setting-row">
-      <span class="setting-label">ngưỡng phát hiện tiếng</span>
+      <span class="setting-label">voice threshold</span>
       <input type="range" min="2" max="20" step="1" value="8" id="voiceThresh"
         oninput="document.getElementById('voiceThreshVal').textContent=this.value">
       <span class="setting-val" id="voiceThreshVal">8</span>
     </div>
     <div class="setting-row">
-      <span class="setting-label">im lặng để phát lại (s)</span>
+      <span class="setting-label">silence to play back (s)</span>
       <input type="range" min="0.5" max="3" step="0.5" value="1.5" id="silenceDelay"
         oninput="document.getElementById('silenceVal').textContent=parseFloat(this.value).toFixed(1)+'s'">
       <span class="setting-val" id="silenceVal">1.5s</span>
     </div>
     <div class="setting-row">
-      <span class="setting-label">chờ sau khi phát xong (s)</span>
+      <span class="setting-label">rest after playback (s)</span>
       <input type="range" min="0.5" max="3" step="0.5" value="1" id="afterDelay"
         oninput="document.getElementById('afterVal').textContent=parseFloat(this.value).toFixed(1)+'s'">
       <span class="setting-val" id="afterVal">1.0s</span>
@@ -143,14 +143,14 @@ async function startSession(){
     loopActive = true;
     waitForVoice();
   } catch(e) {
-    setStatus('Không truy cập được microphone','hãy cho phép quyền mic','');
+    setStatus('Microphone unavailable','please allow microphone access','');
   }
 }
 
 function waitForVoice(){
   if(!loopActive) return;
   state = 'waiting-voice';
-  setStatus('Chờ tiếng...','bắt đầu nói để ghi âm','waiting-voice');
+  setStatus('Listening...','start speaking to record','waiting-voice');
   flatBars('wait');
   const thresh = parseFloat(document.getElementById('voiceThresh').value);
   function check(){
@@ -164,7 +164,7 @@ function waitForVoice(){
 function startRecording(){
   if(!loopActive) return;
   state = 'recording';
-  setStatus('Đang ghi...','im lặng để phát lại','recording');
+  setStatus('Recording...','go silent to play back','recording');
   chunks = [];
   const mimeType = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg']
     .find(m => MediaRecorder.isTypeSupported(m)) || '';
@@ -219,7 +219,7 @@ function triggerPlayback(){
     const mimeType = chunks[0]?.type || 'audio/webm';
     const blob = new Blob(chunks, {type: mimeType});
     if(blob.size < 500){ afterPlay(); return; }
-    setStatus('Phát lại...','lắng nghe giọng mình','playing');
+    setStatus('Playing back...','listen to yourself','playing');
     flatBars('play');
     try {
       if(audioCtx.state==='suspended') await audioCtx.resume();
@@ -244,7 +244,7 @@ function triggerPlayback(){
 function afterPlay(){
   if(!loopActive) return;
   const wait = parseFloat(document.getElementById('afterDelay').value)*1000;
-  setStatus('Chuẩn bị...','sắp lắng nghe lại','');
+  setStatus('Preparing...','listening again soon','');
   flatBars();
   setTimeout(()=>{ if(loopActive) waitForVoice(); }, wait);
 }
@@ -258,7 +258,7 @@ function stopSession(){
   if(stream) stream.getTracks().forEach(t=>t.stop());
   if(audioCtx && audioCtx.state!=='closed') audioCtx.close();
   flatBars();
-  setStatus('Đã dừng','nhấn bắt đầu để tiếp tục','');
+  setStatus('Stopped','press start to continue','');
   document.getElementById('btn-start').disabled = false;
   document.getElementById('btn-stop').disabled  = true;
 }
