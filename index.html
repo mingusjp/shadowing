@@ -125,11 +125,9 @@ function flatBars(cls=''){
 }
 
 function getAvg(){
-  const data = new Uint8Array(analyser.fftSize);
-  analyser.getByteTimeDomainData(data);
-  let sum = 0;
-  for(let i=0;i<data.length;i++){ const v=data[i]-128; sum+=v*v; }
-  return Math.sqrt(sum/data.length) * 3;
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(data);
+  return data.reduce((a,b)=>a+b,0)/data.length;
 }
 
 async function startSession(){
@@ -149,7 +147,14 @@ async function startSession(){
     unlockSrc.start(0);
     analyser = audioCtx.createAnalyser();
     analyser.fftSize = 256;
-    audioCtx.createMediaStreamSource(stream).connect(analyser);
+    const source = audioCtx.createMediaStreamSource(stream);
+    source.connect(analyser);
+    // Ground stream to destination via zero-gain node — forces iOS Safari
+    // to keep the WebAudio graph active so getByteFrequencyData returns real values
+    const ground = audioCtx.createGain();
+    ground.gain.value = 0;
+    source.connect(ground);
+    ground.connect(audioCtx.destination);
     document.getElementById('btn-start').disabled = true;
     document.getElementById('btn-stop').disabled  = false;
     loopActive = true;
@@ -205,17 +210,15 @@ function startRecording(){
 }
 
 function animRecord(){
-  const data = new Uint8Array(analyser.fftSize);
+  const data = new Uint8Array(analyser.frequencyBinCount);
   function frame(){
     if(state!=='recording') return;
-    analyser.getByteTimeDomainData(data);
-    let sum = 0;
-    for(let i=0;i<data.length;i++){ const v=data[i]-128; sum+=v*v; }
-    const avg = Math.sqrt(sum/data.length);
+    analyser.getByteFrequencyData(data);
+    const avg = data.reduce((a,b)=>a+b,0)/data.length;
     bars.forEach((b,i)=>{
-      const v = Math.abs(data[Math.floor(i*data.length/BARS)] - 128);
-      b.style.height = Math.max(3,Math.round(v/128*58))+'px';
-      b.className = 'bar'+(avg>4?' rec':'');
+      const v = data[Math.floor(i*data.length/BARS)];
+      b.style.height = Math.max(3,Math.round(v/255*58))+'px';
+      b.className = 'bar'+(avg>8?' rec':'');
     });
     animFrame = requestAnimationFrame(frame);
   }
@@ -244,7 +247,6 @@ function triggerPlayback(){
   clearTimeout(silenceTimer);
   cancelAnimationFrame(animFrame);
   document.getElementById('countdown').textContent = '';
-  mediaRecorder.stop();
   mediaRecorder.onstop = async () => {
     if(!loopActive) return;
     const mimeType = chunks[0]?.type || 'audio/webm';
@@ -274,6 +276,7 @@ function triggerPlayback(){
       audio.play().catch(next);
     }
   };
+  mediaRecorder.stop();
 }
 
 function afterPlay(){
