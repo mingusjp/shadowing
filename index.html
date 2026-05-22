@@ -108,7 +108,7 @@ for(let i=0;i<BARS;i++){const b=document.createElement('div');b.className='bar';
 const bars = Array.from(waveEl.querySelectorAll('.bar'));
 
 let audioCtx, analyser, stream, mediaRecorder;
-let chunks=[];
+let chunks=[], preChunks=[];
 let state='idle';
 let silenceTimer=null, animFrame=null;
 let loopActive=false;
@@ -147,11 +147,29 @@ async function startSession(){
   }
 }
 
+function makeMimeType(){
+  return ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg']
+    .find(m => MediaRecorder.isTypeSupported(m)) || '';
+}
+
 function waitForVoice(){
   if(!loopActive) return;
   state = 'waiting-voice';
   setStatus('Listening...','start speaking to record','waiting-voice');
   flatBars('wait');
+
+  // Pre-roll: record continuously and keep only the last ~300ms of chunks
+  preChunks = [];
+  const mimeType = makeMimeType();
+  mediaRecorder = mimeType ? new MediaRecorder(stream,{mimeType}) : new MediaRecorder(stream);
+  mediaRecorder.ondataavailable = e => {
+    if(e.data && e.data.size>0){
+      preChunks.push(e.data);
+      if(preChunks.length > 6) preChunks.shift(); // keep ~300ms window
+    }
+  };
+  mediaRecorder.start(50);
+
   const thresh = parseFloat(document.getElementById('voiceThresh').value);
   function check(){
     if(!loopActive || state!=='waiting-voice') return;
@@ -165,12 +183,10 @@ function startRecording(){
   if(!loopActive) return;
   state = 'recording';
   setStatus('Recording...','go silent to play back','recording');
-  chunks = [];
-  const mimeType = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg']
-    .find(m => MediaRecorder.isTypeSupported(m)) || '';
-  mediaRecorder = mimeType ? new MediaRecorder(stream,{mimeType}) : new MediaRecorder(stream);
+  // Seed chunks with pre-roll so the first word isn't lost
+  chunks = [...preChunks];
+  preChunks = [];
   mediaRecorder.ondataavailable = e => { if(e.data && e.data.size>0) chunks.push(e.data); };
-  mediaRecorder.start(50);
   animRecord();
   watchSilence();
 }
