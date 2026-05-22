@@ -131,10 +131,20 @@ function getAvg(){
 }
 
 async function startSession(){
+  if(!navigator.mediaDevices || !window.MediaRecorder){
+    setStatus('Not supported','please update your browser','');
+    return;
+  }
   try {
     stream = await navigator.mediaDevices.getUserMedia({audio:true,video:false});
     audioCtx = new (window.AudioContext||window.webkitAudioContext)();
     if(audioCtx.state==='suspended') await audioCtx.resume();
+    // Unlock AudioContext for iOS — must play a silent buffer on the first user gesture
+    const unlock = audioCtx.createBuffer(1,1,audioCtx.sampleRate);
+    const unlockSrc = audioCtx.createBufferSource();
+    unlockSrc.buffer = unlock;
+    unlockSrc.connect(audioCtx.destination);
+    unlockSrc.start(0);
     analyser = audioCtx.createAnalyser();
     analyser.fftSize = 256;
     audioCtx.createMediaStreamSource(stream).connect(analyser);
@@ -148,7 +158,7 @@ async function startSession(){
 }
 
 function makeMimeType(){
-  return ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/ogg']
+  return ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg']
     .find(m => MediaRecorder.isTypeSupported(m)) || '';
 }
 
