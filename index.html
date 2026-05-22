@@ -103,8 +103,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 
 <script>
 const BARS = 44;
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const waveEl = document.getElementById('waveform');
 for(let i=0;i<BARS;i++){const b=document.createElement('div');b.className='bar';b.style.height='3px';waveEl.appendChild(b);}
 const bars = Array.from(waveEl.querySelectorAll('.bar'));
@@ -127,16 +125,11 @@ function flatBars(cls=''){
 }
 
 function getAvg(){
-  if(isIOS){
-    const data = new Uint8Array(analyser.fftSize);
-    analyser.getByteTimeDomainData(data);
-    let sum = 0;
-    for(let i=0;i<data.length;i++){ const v=data[i]-128; sum+=v*v; }
-    return Math.sqrt(sum/data.length);
-  }
-  const data = new Uint8Array(analyser.frequencyBinCount);
-  analyser.getByteFrequencyData(data);
-  return data.reduce((a,b)=>a+b,0)/data.length;
+  const data = new Uint8Array(analyser.fftSize);
+  analyser.getByteTimeDomainData(data);
+  let sum = 0;
+  for(let i=0;i<data.length;i++){ const v=data[i]-128; sum+=v*v; }
+  return Math.sqrt(sum/data.length) * 3;
 }
 
 async function startSession(){
@@ -206,29 +199,23 @@ function startRecording(){
   chunks = [...preChunks];
   preChunks = [];
   mediaRecorder.ondataavailable = e => { if(e.data && e.data.size>0) chunks.push(e.data); };
+  mediaRecorder.requestData();
   animRecord();
   watchSilence();
 }
 
 function animRecord(){
-  const data = isIOS ? new Uint8Array(analyser.fftSize) : new Uint8Array(analyser.frequencyBinCount);
+  const data = new Uint8Array(analyser.fftSize);
   function frame(){
     if(state!=='recording') return;
-    let avg, getHeight;
-    if(isIOS){
-      analyser.getByteTimeDomainData(data);
-      let sum = 0;
-      for(let i=0;i<data.length;i++){ const v=data[i]-128; sum+=v*v; }
-      avg = Math.sqrt(sum/data.length);
-      getHeight = i => Math.abs(data[Math.floor(i*data.length/BARS)] - 128) / 128 * 58;
-    } else {
-      analyser.getByteFrequencyData(data);
-      avg = data.reduce((a,b)=>a+b,0)/data.length;
-      getHeight = i => data[Math.floor(i*data.length/BARS)] / 255 * 58;
-    }
+    analyser.getByteTimeDomainData(data);
+    let sum = 0;
+    for(let i=0;i<data.length;i++){ const v=data[i]-128; sum+=v*v; }
+    const avg = Math.sqrt(sum/data.length);
     bars.forEach((b,i)=>{
-      b.style.height = Math.max(3,Math.round(getHeight(i)))+'px';
-      b.className = 'bar'+(avg>8?' rec':'');
+      const v = Math.abs(data[Math.floor(i*data.length/BARS)] - 128);
+      b.style.height = Math.max(3,Math.round(v/128*58))+'px';
+      b.className = 'bar'+(avg>4?' rec':'');
     });
     animFrame = requestAnimationFrame(frame);
   }
