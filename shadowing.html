@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luyện giọng</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0f0f0f;
+  --bg2: #1a1a1a;
+  --bg3: #242424;
+  --border: #2e2e2e;
+  --text: #e8e8e8;
+  --muted: #666;
+  --dim: #444;
+  --red: #e05555;
+  --green: #4caf7d;
+  --amber: #d4943a;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 15px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1rem 4rem;
+}
+
+.container { width: 100%; max-width: 560px; }
+
+header {
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.title {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+h1 {
+  font-size: 26px;
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+h1 span { color: var(--red); }
+
+/* Status */
+.status {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--dim);
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.dot.listening { background: var(--red); animation: blink 1s infinite; }
+.dot.playing   { background: var(--green); animation: blink 0.7s infinite; }
+.dot.waiting   { background: var(--amber); }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.status-info { flex: 1; }
+.status-main { font-size: 14px; font-weight: 500; }
+.status-sub  { font-size: 12px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
+.countdown   { font-family: var(--mono); font-size: 13px; color: var(--amber); min-width: 32px; text-align: right; }
+
+/* Waveform */
+.waveform {
+  height: 72px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 14px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+.bar {
+  width: 3px;
+  border-radius: 2px;
+  background: var(--dim);
+  min-height: 3px;
+  transition: height 0.04s;
+}
+.bar.active { background: var(--red); }
+.bar.play   { background: var(--green); }
+
+/* Controls */
+.controls { display: flex; gap: 8px; margin-bottom: 1.25rem; }
+
+button {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: background 0.15s, border-color 0.15s;
+}
+button:hover:not(:disabled) { background: var(--bg3); border-color: var(--dim); }
+button:disabled { opacity: 0.35; cursor: not-allowed; }
+button.danger { border-color: #4a2020; color: var(--red); }
+button.danger:hover:not(:disabled) { background: #1e1414; }
+
+/* Settings */
+.settings {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.setting-row:last-child { margin-bottom: 0; }
+.setting-label { font-size: 12px; color: var(--muted); min-width: 150px; font-family: var(--mono); }
+.setting-val   { font-size: 12px; font-family: var(--mono); color: var(--text); min-width: 38px; text-align: right; }
+
+input[type=range] {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 2px;
+  background: var(--dim);
+  border-radius: 2px;
+  outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--text);
+  cursor: pointer;
+}
+
+/* History */
+.history {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.history-header {
+  padding: 10px 1.25rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--mono);
+  display: flex;
+  justify-content: space-between;
+}
+.history-item {
+  padding: 9px 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.history-item:last-child { border-bottom: none; }
+.history-item:hover { background: var(--bg3); }
+.hist-num { font-family: var(--mono); font-size: 11px; color: var(--dim); min-width: 18px; }
+.hist-dur { font-family: var(--mono); font-size: 12px; color: var(--muted); min-width: 42px; }
+.hist-bar { flex: 1; height: 22px; display: flex; align-items: center; gap: 1px; }
+.hist-seg { width: 2px; border-radius: 1px; background: var(--dim); }
+.hist-icon { color: var(--muted); font-size: 14px; }
+.empty-msg { padding: 1.5rem; text-align: center; font-size: 12px; color: var(--dim); font-family: var(--mono); }
+
+/* Icons inline SVG */
+.icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="title">voice training tool</div>
+    <h1>Luyện <span>giọng</span></h1>
+  </header>
+
+  <div class="status">
+    <div class="dot" id="dot"></div>
+    <div class="status-info">
+      <div class="status-main" id="status-main">Nhấn bắt đầu để luyện tập</div>
+      <div class="status-sub" id="status-sub">app tự phát lại khi bạn ngừng nói</div>
+    </div>
+    <div class="countdown" id="countdown"></div>
+  </div>
+
+  <div class="waveform" id="waveform"></div>
+
+  <div class="controls">
+    <button id="btn-start" onclick="startSession()">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+      Bắt đầu
+    </button>
+    <button id="btn-stop" class="danger" onclick="stopSession()" disabled>
+      <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+      Dừng
+    </button>
+  </div>
+
+  <div class="settings">
+    <div class="setting-row">
+      <span class="setting-label">chờ im lặng để phát lại</span>
+      <input type="range" min="0.5" max="3" step="0.5" value="1.5" id="silenceDelay"
+        oninput="document.getElementById('silenceVal').textContent=parseFloat(this.value).toFixed(1)+'s'">
+      <span class="setting-val" id="silenceVal">1.5s</span>
+    </div>
+    <div class="setting-row">
+      <span class="setting-label">chờ sau khi phát xong</span>
+      <input type="range" min="0.5" max="3" step="0.5" value="1" id="afterDelay"
+        oninput="document.getElementById('afterVal').textContent=parseFloat(this.value).toFixed(1)+'s'">
+      <span class="setting-val" id="afterVal">1.0s</span>
+    </div>
+  </div>
+
+  <div class="history" id="history-box">
+    <div class="history-header">
+      <span>đoạn đã ghi</span>
+      <span id="rec-count">0 đoạn</span>
+    </div>
+    <div class="empty-msg" id="empty-msg">chưa có đoạn nào</div>
+  </div>
+
+</div>
+
+<script>
+const BARS = 44;
+const waveEl = document.getElementById('waveform');
+for(let i=0;i<BARS;i++){const b=document.createElement('div');b.className='bar';b.style.height='3px';waveEl.appendChild(b);}
+const bars = Array.from(waveEl.querySelectorAll('.bar'));
+
+let audioCtx, analyser, stream, mediaRecorder;
+let chunks=[], recordings=[];
+let state='idle', silenceTimer=null, animFrame=null;
+
+function setStatus(main, sub, dotCls, cd=''){
+  document.getElementById('status-main').textContent = main;
+  document.getElementById('status-sub').textContent  = sub;
+  document.getElementById('countdown').textContent   = cd;
+  document.getElementById('dot').className = 'dot '+(dotCls||'');
+}
+
+async function startSession(){
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({audio:true, video:false});
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    audioCtx.createMediaStreamSource(stream).connect(analyser);
+    document.getElementById('btn-start').disabled = true;
+    document.getElementById('btn-stop').disabled  = false;
+    startListening();
+  } catch(e) {
+    setStatus('Không truy cập được microphone','hãy cho phép quyền mic trong trình duyệt','');
+  }
+}
+
+function startListening(){
+  state = 'listening';
+  setStatus('Đang nghe...','nói đoạn bạn muốn luyện, rồi im lặng','listening');
+  chunks = [];
+  try {
+    mediaRecorder = new MediaRecorder(stream);
+  } catch(e) {
+    mediaRecorder = new MediaRecorder(stream, {mimeType:'audio/ogg;codecs=opus'});
+  }
+  mediaRecorder.ondataavailable = e => { if(e.data && e.data.size>0) chunks.push(e.data); };
+  mediaRecorder.start(100);
+  animateBars();
+  watchSilence();
+}
+
+function watchSilence(){
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  const threshold = parseFloat(document.getElementById('silenceDelay').value)*1000;
+  let silentMs=0, last=Date.now();
+  function tick(){
+    if(state!=='listening') return;
+    analyser.getByteFrequencyData(data);
+    const avg = data.reduce((a,b)=>a+b,0)/data.length;
+    const now=Date.now(), dt=now-last; last=now;
+    silentMs = avg<9 ? silentMs+dt : 0;
+    const rem = Math.max(0, threshold-silentMs);
+    document.getElementById('countdown').textContent = (silentMs>200&&rem>0) ? (rem/1000).toFixed(1)+'s' : '';
+    if(silentMs>=threshold && chunks.length>0){ playback(); return; }
+    silenceTimer = setTimeout(tick, 50);
+  }
+  tick();
+}
+
+function playback(){
+  state = 'playing';
+  clearTimeout(silenceTimer);
+  cancelAnimationFrame(animFrame);
+  mediaRecorder.stop();
+  setTimeout(async ()=>{
+    const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+    const blob = new Blob(chunks, {type: mime});
+    recordings.push(blob);
+    addHistoryItem(blob, recordings.length);
+    setStatus('Phát lại...','lắng nghe giọng mình','playing');
+    flatBars('play');
+    try {
+      if(audioCtx.state === 'suspended') await audioCtx.resume();
+      const arrayBuf = await blob.arrayBuffer();
+      const decoded = await audioCtx.decodeAudioData(arrayBuf);
+      const source = audioCtx.createBufferSource();
+      source.buffer = decoded;
+      source.connect(audioCtx.destination);
+      source.start(0);
+      source.onended = () => {
+        const wait = parseFloat(document.getElementById('afterDelay').value)*1000;
+        setStatus('Chuẩn bị...','sắp bắt đầu ghi lại','waiting');
+        flatBars();
+        setTimeout(()=>{ if(state==='playing') startListening(); }, wait);
+      };
+    } catch(e) {
+      console.error('Playback error:', e);
+      const wait = parseFloat(document.getElementById('afterDelay').value)*1000;
+      setTimeout(()=>{ if(state==='playing') startListening(); }, wait);
+    }
+  }, 200);
+}
+
+function flatBars(cls=''){
+  bars.forEach(b=>{ b.style.height='3px'; b.className='bar'+(cls?' '+cls:''); });
+}
+
+function animateBars(){
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  function frame(){
+    if(state!=='listening'){ return; }
+    analyser.getByteFrequencyData(data);
+    const avg = data.reduce((a,b)=>a+b,0)/data.length;
+    bars.forEach((b,i)=>{
+      const v = data[Math.floor(i*data.length/BARS)];
+      const h = Math.max(3, Math.round(v/255*58));
+      b.style.height = h+'px';
+      b.className = 'bar'+(avg>9?' active':'');
+    });
+    animFrame = requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+function stopSession(){
+  state = 'stopped';
+  clearTimeout(silenceTimer);
+  cancelAnimationFrame(animFrame);
+  if(mediaRecorder && mediaRecorder.state!=='inactive') mediaRecorder.stop();
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+  if(audioCtx && audioCtx.state!=='closed') audioCtx.close();
+  flatBars();
+  setStatus('Đã dừng','nhấn bắt đầu để tiếp tục','');
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-stop').disabled  = true;
+}
+
+function addHistoryItem(blob, num){
+  const emptyEl = document.getElementById('empty-msg');
+  if(emptyEl) emptyEl.remove();
+  document.getElementById('rec-count').textContent = recordings.length+' đoạn';
+  const url = URL.createObjectURL(blob);
+  const item = document.createElement('div');
+  item.className = 'history-item';
+  item.title = 'Nhấn để nghe lại';
+  item.innerHTML = `
+    <span class="hist-num">${num}</span>
+    <span class="hist-dur" id="dur-${num}">—</span>
+    <div class="hist-bar" id="hbar-${num}"></div>
+    <svg class="icon hist-icon" viewBox="0 0 24 24" style="width:14px;height:14px"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+  `;
+  item.onclick = () => new Audio(url).play();
+  document.getElementById('history-box').appendChild(item);
+  const tmp = new Audio(url);
+  tmp.onloadedmetadata = () => {
+    const d = tmp.duration;
+    if(isFinite(d)){
+      document.getElementById('dur-'+num).textContent = d.toFixed(1)+'s';
+      const hbar = document.getElementById('hbar-'+num);
+      const segs = Math.max(4, Math.round(d*9));
+      for(let i=0;i<segs;i++){
+        const s=document.createElement('div'); s.className='hist-seg';
+        s.style.height = Math.round(3+Math.random()*14)+'px';
+        hbar.appendChild(s);
+      }
+    }
+  };
+}
+</script>
+</body>
+</html>
